@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Microsoft.EntityFrameworkCore;
 using AutoMapper;
+using Newtonsoft.Json.Serialization;
 
 namespace CommanderAPI
 {
@@ -38,6 +39,12 @@ namespace CommanderAPI
             
             // inject AutoMapper / need AutoMapper.Extensions.Microsoft.DependencyInjection / using AutoMapper
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+
+            // json patch
+            services.AddControllers().AddNewtonsoftJson(s=> {
+                s.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+            })
 
  
 

@@ -3,6 +3,7 @@ using AutoMapper;
 using CommanderAPI.Data;
 using CommanderAPI.Dtos;
 using CommanderAPI.Models;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CommanderAPI.Controllers
@@ -19,7 +20,7 @@ namespace CommanderAPI.Controllers
     public CommandsController(ICommanderAPIRepo repository, IMapper mapper)
     {
       _repository = repository;
-      _mapper = mapper; 
+      _mapper = mapper;
     }
 
 
@@ -28,16 +29,16 @@ namespace CommanderAPI.Controllers
     public ActionResult<IEnumerable<CommandReadDto>> GetAllCommands()
     {
       var commandItems = _repository.GetAllCommands();
-      
+
       return Ok(_mapper.Map<IEnumerable<CommandReadDto>>(commandItems));
     }
 
     // GET api/commands/{id} from HTTP
-    [HttpGet("{id}", Name="GetCommandByID")]
+    [HttpGet("{id}", Name = "GetCommandByID")]
     public ActionResult<CommandReadDto> GetCommandByID(int id)
     {
       var commandItem = _repository.GetCommandByID(id);
-      if(commandItem !=null)
+      if (commandItem != null)
       {
         return Ok(_mapper.Map<CommandReadDto>(commandItem));
       }
@@ -57,7 +58,7 @@ namespace CommanderAPI.Controllers
       // command -> commandreaddto
       var commandReadDto = _mapper.Map<CommandReadDto>(commandModel);
 
-      return CreatedAtRoute(nameof(GetCommandByID), new {id = commandReadDto.ID}, commandReadDto);
+      return CreatedAtRoute(nameof(GetCommandByID), new { id = commandReadDto.ID }, commandReadDto);
       // 201 message with url.
 
 
@@ -70,11 +71,11 @@ namespace CommanderAPI.Controllers
     public ActionResult UpdateCommand(int id, CommandUpdateDto commandUpdateDto)
     {
       var commandModelFromRepo = _repository.GetCommandByID(id);
-      if(commandModelFromRepo == null)
+      if (commandModelFromRepo == null)
       {
         return NotFound();  // 404 not found
       }
-                          //  from -> to
+      //  from -> to
       _mapper.Map(commandUpdateDto, commandModelFromRepo);
 
       _repository.UpdateCommand(commandModelFromRepo);
@@ -82,6 +83,33 @@ namespace CommanderAPI.Controllers
       _repository.SaveChanges();
 
       return NoContent(); // 204
+    }
+
+
+    // PATCH api/commands/{id}
+    [HttpPatch("{id}")]
+    public ActionResult PartialCommandUpdate(int id, JsonPatchDocument<CommandUpdateDto> patchDoc)
+    {
+      var commandModelFromRepo = _repository.GetCommandByID(id);
+      if (commandModelFromRepo == null)
+      {
+        return NotFound();  // 404 not found
+      }
+
+                                            // Command model -> CommandUpdateDto 
+      var commandToPatch = _mapper.Map<CommandUpdateDto>(commandModelFromRepo);
+      
+      patchDoc.ApplyTo(commandToPatch);
+
+      if(!TryValidateModel(commandToPatch))
+      {
+        return ValidationProblem(ModelState);
+      }
+      _mapper.Map(commandToPatch, commandModelFromRepo);
+      _repository.UpdateCommand(commandModelFromRepo);
+      _repository.SaveChanges();
+      return NoContent();
+
     }
   }
 }
